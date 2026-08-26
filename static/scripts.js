@@ -1,4 +1,4 @@
-// EventoLume — interações do lado do cliente.
+// Dial Eventos — interações do lado do cliente.
 // Sem dependências externas; funciona como aprimoramento progressivo
 // (o formulário e o catálogo continuam funcionando sem JS).
 //
@@ -34,7 +34,7 @@
       dataNoPassado: "A data do evento não pode estar no passado.",
       semItensCategoria: "Nenhum item nesta categoria.",
     },
-    storageKeyFiltro: "eventolume:filtro-ativo",
+    storageKeyFiltro: "dial-eventos:filtro-ativo",
   };
 
   function formatMoney(value) {

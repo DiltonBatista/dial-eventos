@@ -145,13 +145,13 @@ def agrupar_por_categoria(itens) -> dict[str, list]:
 # Layout / páginas públicas
 # --------------------------------------------------------------------------
 
-def layout(content: str, title: str = "EventoLume") -> bytes:
+def layout(content: str, title: str = "Dial Eventos") -> bytes:
     return f"""<!doctype html><html lang='pt-BR'><head>
     <meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>
-    <title>{esc(title)} | EventoLume</title><link rel='stylesheet' href='/static/style.css'>
-    </head><body><header><a class='brand' href='/'>Evento<span>Lume</span></a>
+    <title>{esc(title)} | Dial Eventos</title><link rel='stylesheet' href='/static/style.css'>
+    </head><body><header><a class='brand' href='/'>Dial<span> Eventos</span></a>
     <nav><a href='/'>Início</a><a href='/catalogo'>Catálogo</a><a href='/pedido'>Fazer pedido</a><a href='/admin'>Agenda</a></nav></header>
-    <main>{content}</main><footer>EventoLume · Locação que dá vida ao seu evento</footer>
+    <main>{content}</main><footer>Dial Eventos · Locação que dá vida ao seu evento</footer>
     <script src='/static/scripts.js'></script>
     </body></html>""".encode()
 

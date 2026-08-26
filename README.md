@@ -1,11 +1,11 @@
-# EventoLume — Sistema de locação de materiais para eventos
+# Dial Eventos — Sistema de locação de materiais para eventos
 
 Aplicação 100% Python (biblioteca padrão), sem dependências externas.
 Todo o HTML é gerado dentro de `app.py` — não há motor de templates.
 
 ## Estrutura
 ```
-eventolume/
+dial-eventos/
 ├── app.py              # aplicação WSGI (rotas, banco de dados, HTML)
 ├── static/
 │   ├── style.css        # estilos do site
@@ -88,13 +88,13 @@ fechamento da conexão.
 nohup python3 app.py > server.log 2>&1 &
 
 # (opcional) rodar como serviço systemd, colocando este bloco em
-# /etc/systemd/system/eventolume.service
+# /etc/systemd/system/dial-eventos.service
 [Unit]
-Description=EventoLume
+Description=Dial Eventos
 After=network.target
 
 [Service]
-WorkingDirectory=/caminho/para/eventolume
+WorkingDirectory=/caminho/para/dial-eventos
 ExecStart=/usr/bin/python3 app.py
 Environment=PORT=8000
 Restart=always
@@ -103,7 +103,7 @@ Restart=always
 WantedBy=multi-user.target
 ```
 
-Depois: `sudo systemctl enable --now eventolume`.
+Depois: `sudo systemctl enable --now dial-eventos`.
 
 > Para produção real, recomenda-se colocar um proxy reverso (nginx/Caddy)
 > na frente do `wsgiref`, já que ele é um servidor simples, adequado para
