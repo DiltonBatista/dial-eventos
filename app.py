@@ -591,5 +591,6 @@ if __name__ == "__main__":
     init_db()
     host = os.environ.get("HOST", "0.0.0.0")
     port = int(os.environ.get("PORT", "8000"))
-    print(f"Sistema disponível em http://{host}:{port}")
+    display_host = "localhost" if host == "0.0.0.0" else host
+    print(f"Sistema disponível em http://{display_host}:{port}")
     make_server(host, port, application).serve_forever()
