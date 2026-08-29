@@ -145,12 +145,16 @@ def agrupar_por_categoria(itens) -> dict[str, list]:
 # Layout / páginas públicas
 # --------------------------------------------------------------------------
 
-def layout(content: str, title: str = "Dial Eventos") -> bytes:
+def layout(content: str, title: str = "Dial Eventos", active_menu: str = "") -> bytes:
+    def menu_link(label: str, href: str, key: str) -> str:
+        active_class = " class='active'" if active_menu == key else ""
+        return f"<a{active_class} href='{href}'>{label}</a>"
+
     return f"""<!doctype html><html lang='pt-BR'><head>
     <meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>
     <title>{esc(title)} | Dial Eventos</title><link rel='stylesheet' href='/static/style.css'>
     </head><body><header><a class='brand' href='/'>Dial<span> Eventos</span></a>
-    <nav><a href='/'>Início</a><a href='/catalogo'>Catálogo</a><a href='/pedido'>Fazer pedido</a><a href='/admin'>Agenda</a></nav></header>
+    <nav class='main-nav'>{menu_link('Início', '/', 'inicio')}{menu_link('Catálogo', '/catalogo', 'catalogo')}{menu_link('Fazer pedido', '/pedido', 'pedido')}{menu_link('Agenda', '/admin', 'agenda')}</nav></header>
     <main>{content}</main><footer>Dial Eventos · Locação que dá vida ao seu evento</footer>
     <script src='/static/scripts.js'></script>
     </body></html>""".encode()
@@ -173,7 +177,7 @@ def home() -> bytes:
     <section><div class='section-head'><div><p class='eyebrow'>MOSTRUÁRIO</p><h2>O que temos para o seu evento</h2></div><a href='/catalogo'>Ver catálogo completo →</a></div>
     <div class='grid'>{cards}</div></section>
     <section class='steps'><p class='eyebrow'>COMO FUNCIONA</p><h2>Organize seu aluguel em 3 passos</h2><div class='step-grid'><p><b>01</b> Escolha os materiais no catálogo</p><p><b>02</b> Preencha seus dados e o pedido</p><p><b>03</b> Receba a confirmação e acompanhe na agenda</p></div></section>
-    """)
+    """, active_menu="inicio")
 
 
 def catalogo_page(categoria_filtro: str = "") -> bytes:
@@ -200,7 +204,7 @@ def catalogo_page(categoria_filtro: str = "") -> bytes:
     <p class='lead'>Explore por categoria e monte sua lista. Na hora do pedido você escolhe as quantidades.</p>
     <div class='filter-tabs'>{tabs}</div></section>{body}
     <section class='cta-bar'><p>Já sabe o que precisa?</p><a class='button' href='/pedido'>Ir para o formulário de pedido →</a></section>""",
-        "Catálogo")
+        "Catálogo", "catalogo")
 
 
 def pedido_form(error: str = "", valores: dict | None = None) -> bytes:
@@ -257,7 +261,7 @@ def pedido_form(error: str = "", valores: dict | None = None) -> bytes:
     <label>Observações<textarea name='observacoes' placeholder='Alguma informação adicional?'>{esc(valores.get('observacoes',''))}</textarea></label>
 
     <div class='total-bar'><span>Valor estimado</span><strong id='total-estimado'>{fmt_money(0)}</strong></div>
-    <button class='button' type='submit'>Enviar pedido e agendar →</button></form></section>""")
+    <button class='button' type='submit'>Enviar pedido e agendar →</button></form></section>""", active_menu="pedido")
 
 
 def create_order(data: dict[str, str]) -> tuple[int, float]:
@@ -376,7 +380,7 @@ def admin(filtro_status: str = "") -> bytes:
         <nav class='admin-links'><a href='/admin/materiais'>Gerenciar catálogo →</a><a href='/admin/clientes'>Ver clientes →</a></nav>
         </section>
         <section class='table-wrap'><table><thead><tr><th>Pedido</th><th>Cliente</th><th>Evento e materiais</th><th>Data</th><th>Valor</th><th>Status</th></tr></thead><tbody>{table}</tbody></table></section>""",
-        "Agenda",
+        "Agenda", "agenda",
     )
 
 
@@ -407,7 +411,7 @@ def admin_clientes() -> bytes:
         <p class='lead'>{len(clientes)} cliente(s) no sistema.</p>
         <nav class='admin-links'><a href='/admin'>← Voltar para agenda</a></nav></section>
         <section class='table-wrap'><table><thead><tr><th>Cliente</th><th>Contato</th><th>Endereço</th><th>Pedidos</th><th>Total gasto</th></tr></thead><tbody>{table}</tbody></table></section>""",
-        "Clientes",
+        "Clientes", "agenda",
     )
 
 
@@ -444,7 +448,7 @@ def admin_materiais(error: str = "") -> bytes:
         <button class='button' type='submit'>Adicionar ao catálogo</button>
         </form></section>
         <section class='table-wrap'><table><thead><tr><th>Categoria</th><th>Item</th><th>Preço</th><th>Status</th><th>Ações</th></tr></thead><tbody>{table}</tbody></table></section>""",
-        "Catálogo · Admin",
+        "Catálogo · Admin", "agenda",
     )
 
 

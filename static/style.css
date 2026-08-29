@@ -45,15 +45,16 @@ header {
   color: var(--pink);
 }
 
-nav a {
+.main-nav a {
   margin-left: 28px;
   text-decoration: none;
   color: var(--muted);
   font-weight: 500;
 }
 
-nav a:hover {
-  color: var(--ink);
+.main-nav a:hover,
+.main-nav a.active {
+  color: #000;
 }
 
 main {
