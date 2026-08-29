@@ -9,6 +9,7 @@ from __future__ import annotations
 import html
 import os
 import re
+import secrets
 import sqlite3
 from contextlib import closing
 from datetime import datetime
@@ -98,6 +99,10 @@ def init_db() -> None:
                 observacoes TEXT,
                 valor_total REAL NOT NULL DEFAULT 0,
                 status TEXT NOT NULL DEFAULT 'Agendado',
+                pix_chave TEXT,
+                pix_qr TEXT,
+                status_pagamento TEXT NOT NULL DEFAULT 'pendente',
+                pago_em TEXT,
                 criado_em TEXT NOT NULL,
                 FOREIGN KEY (cliente_id) REFERENCES clientes(id)
             );
@@ -115,11 +120,20 @@ def init_db() -> None:
         """)
         total = db.execute("SELECT COUNT(*) AS n FROM materiais").fetchone()["n"]
         if total == 0:
-            now = datetime.now().isoformat(timespec="seconds")
             db.executemany(
                 "INSERT INTO materiais (categoria,nome,descricao,preco_unitario,unidade,ativo) VALUES (?,?,?,?,?,1)",
                 CATALOGO_SEED,
             )
+
+        colunas_pedidos = {row["name"] for row in db.execute("PRAGMA table_info(pedidos)").fetchall()}
+        for coluna, tipo in {
+            "pix_chave": "TEXT",
+            "pix_qr": "TEXT",
+            "status_pagamento": "TEXT NOT NULL DEFAULT 'pendente'",
+            "pago_em": "TEXT",
+        }.items():
+            if coluna not in colunas_pedidos:
+                db.execute(f"ALTER TABLE pedidos ADD COLUMN {coluna} {tipo}")
 
 
 def esc(value: object) -> str:
@@ -128,6 +142,193 @@ def esc(value: object) -> str:
 
 def fmt_money(value: float) -> str:
     return f"R$ {value:,.2f}".replace(",", "§").replace(".", ",").replace("§", ".")
+
+
+PIX_CHAVE_PADRAO = "46.140.249/0001-01"
+
+
+def gerar_chave_pix() -> str:
+    return PIX_CHAVE_PADRAO
+
+
+def gerar_qr_visual(chave_pix: str) -> str:
+    seed = sum(ord(char) for char in chave_pix)
+    linhas = []
+    for row in range(11):
+        celulas = []
+        for col in range(11):
+            ativado = ((seed + row * 17 + col * 13 + row * col) % 2 == 0)
+            celulas.append(f"<span class='qr-cell {'on' if ativado else 'off'}'></span>")
+        linhas.append(f"<div class='qr-row'>{''.join(celulas)}</div>")
+    return ''.join(linhas)
+
+
+def buscar_pedido_completo(pedido_id: int):
+    with closing(get_db()) as db:
+        pedido = db.execute(
+            """SELECT p.*, c.nome, c.email, c.telefone, c.endereco
+               FROM pedidos p
+               JOIN clientes c ON c.id = p.cliente_id
+               WHERE p.id = ?""",
+            (pedido_id,),
+        ).fetchone()
+        if pedido is None:
+            return None, []
+        itens = db.execute(
+            "SELECT * FROM pedido_itens WHERE pedido_id = ? ORDER BY categoria, nome_material",
+            (pedido_id,),
+        ).fetchall()
+    return pedido, itens
+
+
+def pedido_relatorio_page(pedido_id: int) -> bytes:
+    pedido, itens = buscar_pedido_completo(pedido_id)
+    if pedido is None:
+        return not_found()
+
+    lista_itens = "".join(
+        f"<tr><td>{it['quantidade']}×</td><td>{esc(it['nome_material'])}</td><td>{esc(it['categoria'])}</td><td>{fmt_money(it['preco_unitario'])}</td><td>{fmt_money(it['quantidade'] * it['preco_unitario'])}</td></tr>"
+        for it in itens
+    )
+    if not lista_itens:
+        lista_itens = "<tr><td colspan='5'>Nenhum item registrado no pedido.</td></tr>"
+
+    html_relatorio = f"""
+    <section class='report-wrap'>
+        <div class='report-header'>
+            <div>
+                <p class='eyebrow'>RELATÓRIO DO PEDIDO</p>
+                <h1>Pedido #{pedido['id']:04d}</h1>
+            </div>
+            <button class='button' onclick='window.print()'>Imprimir</button>
+        </div>
+
+        <div class='report-card'>
+            <h2>Dados do cliente</h2>
+            <p><strong>Nome:</strong> {esc(pedido['nome'])}</p>
+            <p><strong>E-mail:</strong> {esc(pedido['email'])}</p>
+            <p><strong>Telefone:</strong> {esc(pedido['telefone'])}</p>
+            <p><strong>Endereço:</strong> {esc(pedido['endereco'])}</p>
+        </div>
+
+        <div class='report-card'>
+            <h2>Detalhes do evento</h2>
+            <p><strong>Tipo:</strong> {esc(pedido['tipo_evento'])}</p>
+            <p><strong>Data:</strong> {esc(pedido['data_evento'])}</p>
+            <p><strong>Horário:</strong> {esc(pedido['horario'])}</p>
+            <p><strong>Convidados:</strong> {pedido['quantidade_convidados']}</p>
+            <p><strong>Status:</strong> {esc(pedido['status'])}</p>
+            <p><strong>Pagamento:</strong> {esc(pedido['status_pagamento'])}</p>
+        </div>
+
+        <div class='report-card'>
+            <h2>Materiais solicitados</h2>
+            <table class='report-table'>
+                <thead><tr><th>Qtd</th><th>Material</th><th>Categoria</th><th>Unit.</th><th>Total</th></tr></thead>
+                <tbody>{lista_itens}</tbody>
+            </table>
+        </div>
+
+        <div class='report-card total-box'>
+            <p><strong>Valor total estimado:</strong> {fmt_money(pedido['valor_total'])}</p>
+            <p><strong>Observações:</strong> {esc(pedido['observacoes'] or 'Nenhuma')}</p>
+            <p><strong>Materiais extras:</strong> {esc(pedido['materiais_extra'] or 'Nenhum')}</p>
+        </div>
+    </section>
+    """
+    return layout(f"{html_relatorio}", "Relatório do pedido")
+
+
+def confirmar_pagamento_pix(pedido_id: int) -> None:
+    with closing(get_db()) as db, db:
+        pedido = db.execute("SELECT * FROM pedidos WHERE id = ?", (pedido_id,)).fetchone()
+        if pedido is None:
+            raise ValueError("Pedido não encontrado.")
+        chave_pix = PIX_CHAVE_PADRAO
+        qr_html = pedido["pix_qr"] or gerar_qr_visual(chave_pix)
+        db.execute(
+            "UPDATE pedidos SET pix_chave = ?, pix_qr = ?, status_pagamento = 'pago', pago_em = ?, status = 'Confirmado' WHERE id = ?",
+            (chave_pix, qr_html, datetime.now().isoformat(timespec="seconds"), pedido_id),
+        )
+
+
+def atualizar_chave_pix_do_pedido(pedido_id: int, chave_pix: str | None = None) -> str:
+    chave = (chave_pix or PIX_CHAVE_PADRAO)
+    qr = gerar_qr_visual(chave)
+    with closing(get_db()) as db, db:
+        db.execute(
+            "UPDATE pedidos SET pix_chave = ?, pix_qr = ? WHERE id = ?",
+            (chave, qr, pedido_id),
+        )
+    return chave
+
+
+def pedido_pix_page(pedido_id: int) -> bytes:
+    pedido, itens = buscar_pedido_completo(pedido_id)
+    if pedido is None:
+        return not_found()
+
+    chave_pix = PIX_CHAVE_PADRAO
+    if pedido["pix_chave"] != chave_pix or not pedido["pix_qr"]:
+        atualizar_chave_pix_do_pedido(pedido_id, chave_pix)
+        pedido, itens = buscar_pedido_completo(pedido_id)
+
+    qr_html = pedido["pix_qr"] or gerar_qr_visual(chave_pix)
+    pagamento_status = "Pago" if pedido["status_pagamento"] == "pago" else "Pendente"
+    return layout(
+        f"""
+        <section class='payment-wrap'>
+            <p class='eyebrow'>PAGAMENTO VIA PIX</p>
+            <h1>Finalize seu pedido</h1>
+            <p class='lead'>Use a chave Pix gerada ou leia o QR Code.</p>
+
+            <div class='payment-card'>
+                <div class='payment-qr'>
+                    <div class='qr-box'>{qr_html}</div>
+                </div>
+                <div class='payment-info'>
+                    <p><strong>Valor:</strong> {fmt_money(pedido['valor_total'])}</p>
+                    <p><strong>Chave Pix:</strong> <span class='pix-key'>{esc(chave_pix)}</span></p>
+                    <p><strong>Status:</strong> {pagamento_status}</p>
+                    <form method='post' action='/pedido/{pedido_id}/pix'>
+                        <button class='button' type='submit'>Confirmar pagamento</button>
+                    </form>
+                    <a class='button secondary' href='/pedido/{pedido_id}/relatorio'>Ver relatório</a>
+                </div>
+            </div>
+        </section>
+        """,
+        "Pagamento Pix",
+    )
+
+
+def comprovante_pix_page(pedido_id: int) -> bytes:
+    pedido, _ = buscar_pedido_completo(pedido_id)
+    if pedido is None:
+        return not_found()
+    if pedido["status_pagamento"] != "pago":
+        return pedido_pix_page(pedido_id)
+
+    return layout(
+        f"""
+        <section class='receipt-wrap'>
+            <p class='eyebrow'>COMPROVANTE</p>
+            <h1>Pagamento confirmado</h1>
+            <div class='report-card'>
+                <p><strong>Pedido:</strong> #{pedido['id']:04d}</p>
+                <p><strong>Cliente:</strong> {esc(pedido['nome'])}</p>
+                <p><strong>Valor pago:</strong> {fmt_money(pedido['valor_total'])}</p>
+                <p><strong>Data do pagamento:</strong> {esc(pedido['pago_em'])}</p>
+                <p><strong>Chave Pix:</strong> {esc(pedido['pix_chave'])}</p>
+            </div>
+            <div class='actions-row'>
+                <button class='button' onclick='window.print()'>Imprimir comprovante</button>
+                <a class='button secondary' href='/pedido/{pedido_id}/relatorio'>Ver relatório do pedido</a>
+            </div>
+        </section>
+        """,
+        "Comprovante Pix",
+    )
 
 
 def catalogo_ativo(db: sqlite3.Connection) -> list[sqlite3.Row]:
@@ -176,6 +377,11 @@ def home() -> bytes:
     <div class='hero-card'><span>✦</span><p>Seu evento começa aqui</p><strong>Simples, bonito e organizado.</strong></div></section>
     <section><div class='section-head'><div><p class='eyebrow'>MOSTRUÁRIO</p><h2>O que temos para o seu evento</h2></div><a href='/catalogo'>Ver catálogo completo →</a></div>
     <div class='grid'>{cards}</div></section>
+    <section class='wedding-showcase'><div class='section-head'><div><p class='eyebrow'>CASAMENTOS</p><h2>Inspire-se para o seu grande dia</h2></div><a href='/catalogo?categoria=Casamento'>Ver itens para casamento →</a></div>
+    <div class='wedding-gallery'>
+        <figure><img src='/static/static/images/casamentos/casamento-cerimonia.png' alt='Cerimônia de casamento ao ar livre, com flores e iluminação delicada'><figcaption>Uma cerimônia acolhedora, com cada detalhe pensado para emocionar.</figcaption></figure>
+        <figure><img src='/static/static/images/casamentos/casamento-recepcao.png' alt='Recepção de casamento com mesas decoradas, lustre e tecidos no teto'><figcaption>Uma recepção elegante para celebrar com quem você ama.</figcaption></figure>
+    </div></section>
     <section class='steps'><p class='eyebrow'>COMO FUNCIONA</p><h2>Organize seu aluguel em 3 passos</h2><div class='step-grid'><p><b>01</b> Escolha os materiais no catálogo</p><p><b>02</b> Preencha seus dados e o pedido</p><p><b>03</b> Receba a confirmação e acompanhe na agenda</p></div></section>
     """, active_menu="inicio")
 
@@ -306,10 +512,10 @@ def create_order(data: dict[str, str]) -> tuple[int, float]:
             (data['nome'].strip(), data['email'].strip(), data['telefone'].strip(), data['endereco'].strip(), now),
         )
         order = db.execute(
-            """INSERT INTO pedidos (cliente_id,tipo_evento,data_evento,horario,quantidade_convidados,materiais_extra,observacoes,valor_total,criado_em)
-                VALUES (?,?,?,?,?,?,?,?,?)""",
+            """INSERT INTO pedidos (cliente_id,tipo_evento,data_evento,horario,quantidade_convidados,materiais_extra,observacoes,valor_total,pix_chave,pix_qr,criado_em)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
             (client.lastrowid, data['tipo_evento'], data['data_evento'], data['horario'], guests,
-             materiais_extra, data.get('observacoes', '').strip(), valor_total, now),
+             materiais_extra, data.get('observacoes', '').strip(), valor_total, PIX_CHAVE_PADRAO, gerar_qr_visual(PIX_CHAVE_PADRAO), now),
         )
         pedido_id = order.lastrowid
         for material, qtd in itens_selecionados:
@@ -323,7 +529,12 @@ def create_order(data: dict[str, str]) -> tuple[int, float]:
 
 def success(order_id: int, valor_total: float) -> bytes:
     return layout(
-        f"""<section class='confirmation'><div class='check'>✓</div><p class='eyebrow'>PEDIDO #{order_id:04d}</p><h1>Seu aluguel já foi agendado com sucesso!</h1><p class='lead'>Recebemos seu pedido, no valor estimado de <b>{fmt_money(valor_total)}</b>, e ele está salvo em nossa agenda. Em breve entraremos em contato para confirmar os detalhes.</p><a class='button' href='/'>Voltar ao início</a></section>""",
+        f"""<section class='confirmation'><div class='check'>✓</div><p class='eyebrow'>PEDIDO #{order_id:04d}</p><h1>Seu aluguel já foi agendado com sucesso!</h1><p class='lead'>Recebemos seu pedido, no valor estimado de <b>{fmt_money(valor_total)}</b>, e ele está salvo em nossa agenda. Em breve entraremos em contato para confirmar os detalhes.</p>
+        <div class='actions-row'>
+            <a class='button' href='/pedido/{order_id}/relatorio'>Imprimir relatório</a>
+            <a class='button secondary' href='/pedido/{order_id}/pix'>Pagar com Pix</a>
+        </div>
+        <a class='text-link' href='/'>Voltar ao início</a></section>""",
         "Pedido confirmado",
     )
 
@@ -488,14 +699,22 @@ def not_found() -> bytes:
 
 
 def serve_static(path: str):
-    safe_name = Path(path).name
-    file_path = STATIC_DIR / safe_name
-    if not file_path.is_file():
+    requested_path = Path(path)
+    if requested_path.is_absolute() or ".." in requested_path.parts:
+        return None
+    file_path = STATIC_DIR / requested_path
+    if not file_path.is_file() or STATIC_DIR not in file_path.resolve().parents:
         return None
     if file_path.suffix == ".css":
         content_type = "text/css; charset=utf-8"
     elif file_path.suffix == ".js":
         content_type = "application/javascript; charset=utf-8"
+    elif file_path.suffix == ".png":
+        content_type = "image/png"
+    elif file_path.suffix in {".jpg", ".jpeg"}:
+        content_type = "image/jpeg"
+    elif file_path.suffix == ".webp":
+        content_type = "image/webp"
     else:
         content_type = "application/octet-stream"
     return file_path.read_bytes(), content_type
@@ -512,6 +731,7 @@ def read_body(environ) -> dict[str, str]:
 
 
 ID_PATTERN = re.compile(r"^/admin/(pedido|materiais)/(\d+)/(status|toggle|excluir)$")
+ORDER_ACTION_PATTERN = re.compile(r"^/pedido/(\d+)/(relatorio|pix|comprovante)$")
 
 
 def application(environ, start_response):
@@ -569,6 +789,27 @@ def application(environ, start_response):
             return respond(success(pedido_id, valor_total), "201 Created")
         except ValueError as exc:
             return respond(pedido_form(str(exc), values), "400 Bad Request")
+
+    order_match = ORDER_ACTION_PATTERN.match(path)
+    if order_match and method == "GET":
+        pedido_id = int(order_match.group(1))
+        action = order_match.group(2)
+        if action == "relatorio":
+            return respond(pedido_relatorio_page(pedido_id), "200 OK")
+        if action == "pix":
+            return respond(pedido_pix_page(pedido_id), "200 OK")
+        if action == "comprovante":
+            return respond(comprovante_pix_page(pedido_id), "200 OK")
+
+    if order_match and method == "POST":
+        pedido_id = int(order_match.group(1))
+        action = order_match.group(2)
+        if action == "pix":
+            try:
+                confirmar_pagamento_pix(pedido_id)
+                return redirect(f"/pedido/{pedido_id}/comprovante")
+            except ValueError:
+                return redirect("/")
 
     if path == "/admin" and method == "GET":
         status_filtro = (qs.get("status") or [""])[0]
