@@ -501,8 +501,8 @@ def home() -> bytes:
         for c in categorias
     )
     event_gallery = [
-        ("/static/static/images/casamentos/casamento-cerimonia.png", "Casamento ao ar livre"),
-        ("/static/static/images/casamentos/casamento-recepcao.png", "Recepção elegante"),
+        ("/static/static/images/casamentos/casamento-cerimonia-premium.svg", "Cerimônia de casamento premium"),
+        ("/static/static/images/casamentos/casamento-recepcao-premium.svg", "Recepção de casamento premium"),
         ("/static/images/hero/hero-evento-2.svg", "Aniversário em clima acolhedor"),
         ("/static/images/hero/hero-evento-6.svg", "Formatura com ambiente sofisticado"),
         ("/static/images/hero/hero-evento-9.svg", "Evento corporativo premium"),
@@ -515,19 +515,28 @@ def home() -> bytes:
 
     return layout(f"""
     <section class='intro-focused'>
-        <div class='intro-copy'>
-            <p class='eyebrow'>EVENTOS MEMORÁVEIS</p>
-            <h1>Materiais que transformam cada celebração.</h1>
-            <p class='lead'>Decoração, estrutura e mobiliário para casamentos, festas e eventos corporativos com acabamento sofisticado e atendimento personalizado.</p>
-            <div class='hero-actions'>
-                <a class='button' href='/pedido'>Começar meu pedido →</a>
-                <a class='button secondary' href='/catalogo'>Ver catálogo</a>
+        <div class='intro-content'>
+            <div class='intro-copy'>
+                <p class='eyebrow'>EVENTOS MEMORÁVEIS</p>
+                <h1>Materiais que transformam cada celebração.</h1>
+                <p class='lead'>Decoração, estrutura e mobiliário para casamentos, festas e eventos corporativos com acabamento sofisticado e atendimento personalizado.</p>
+                <div class='hero-actions'>
+                    <a class='button' href='/pedido'>Começar meu pedido →</a>
+                    <a class='button secondary' href='/catalogo'>Ver catálogo</a>
+                </div>
+                <div class='hero-quick-links' aria-label='Categorias mais buscadas'>
+                    <a class='quick-link' href='/catalogo?categoria=Casamento'>Casamentos</a>
+                    <a class='quick-link' href='/catalogo?categoria=Aniversários'>Aniversários</a>
+                    <a class='quick-link' href='/catalogo?categoria=Formatura'>Formatura</a>
+                    <a class='quick-link' href='/catalogo?categoria=Corporativo'>Corporativo</a>
+                </div>
             </div>
-            <div class='hero-quick-links' aria-label='Categorias mais buscadas'>
-                <a class='quick-link' href='/catalogo?categoria=Casamento'>Casamentos</a>
-                <a class='quick-link' href='/catalogo?categoria=Aniversários'>Aniversários</a>
-                <a class='quick-link' href='/catalogo?categoria=Formatura'>Formatura</a>
-                <a class='quick-link' href='/catalogo?categoria=Corporativo'>Corporativo</a>
+            <div class='intro-visual'>
+                <img src='/static/static/images/casamentos/casamento-recepcao-premium.svg' alt='Mesa de recepção elegante para casamentos'>
+                <div class='intro-visual-badge'>
+                    <span>Eventos premium</span>
+                    <strong>Recepção com impact visual</strong>
+                </div>
             </div>
         </div>
     </section>
