@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" role="img" aria-label="Casamento intimista com clima sofisticado">
+  <defs>
+    <linearGradient id="bg8" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#f8e8df"/>
+      <stop offset="38%" stop-color="#f4c1b4"/>
+      <stop offset="100%" stop-color="#d69ac0"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="1000" fill="url(#bg8)"/>
+  <circle cx="170" cy="190" r="110" fill="#fff4d9" opacity="0.72"/>
+  <circle cx="640" cy="200" r="115" fill="#f9ebff" opacity="0.7"/>
+  <path d="M0 760 C180 700, 260 760, 400 720 S620 700, 800 780 L800 1000 L0 1000 Z" fill="#86656d" opacity="0.22"/>
+  <path d="M140 330 L660 330" stroke="#fff8f3" stroke-width="8" opacity="0.9"/>
+  <path d="M210 330 L270 220 L330 330" fill="#fef7ef" opacity="0.9"/>
+  <path d="M470 330 L530 220 L590 330" fill="#fef7ef" opacity="0.9"/>
+  <rect x="220" y="390" width="360" height="220" rx="26" fill="#fffaf7" opacity="0.88"/>
+  <path d="M330 380 L400 300 L470 380" fill="#f0d6ca"/>
+  <path d="M280 520 L520 520" stroke="#dfbfac" stroke-width="6" opacity="0.8"/>
+  <circle cx="400" cy="470" r="56" fill="#f7e2d7"/>
+  <path d="M340 470 L400 420 L460 470" fill="#f1c9b0"/>
+  <rect x="180" y="640" width="440" height="120" rx="18" fill="#fff7f3" opacity="0.8"/>
+  <circle cx="260" cy="700" r="20" fill="#f2d173"/>
+  <circle cx="400" cy="700" r="20" fill="#f2d173"/>
+  <circle cx="540" cy="700" r="20" fill="#f2d173"/>
+</svg>

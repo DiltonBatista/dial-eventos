@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" role="img" aria-label="Festa com estilo alegre">
+  <defs>
+    <linearGradient id="bg4" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#f7e7db"/>
+      <stop offset="45%" stop-color="#f8b9a7"/>
+      <stop offset="100%" stop-color="#f0d166"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="1000" fill="url(#bg4)"/>
+  <circle cx="610" cy="180" r="120" fill="#fff1c8" opacity="0.7"/>
+  <circle cx="200" cy="210" r="100" fill="#fff8dc" opacity="0.75"/>
+  <path d="M0 780 C120 675, 300 700, 400 720 S650 760, 800 740 L800 1000 L0 1000 Z" fill="#d89b57" opacity="0.24"/>
+  <rect x="150" y="420" width="500" height="180" rx="24" fill="#fff8f3" opacity="0.85"/>
+  <rect x="220" y="300" width="360" height="150" rx="16" fill="#fdebd7"/>
+  <circle cx="245" cy="370" r="38" fill="#f5c76d"/>
+  <circle cx="398" cy="370" r="38" fill="#f5c76d"/>
+  <circle cx="552" cy="370" r="38" fill="#f5c76d"/>
+  <rect x="220" y="610" width="110" height="130" rx="18" fill="#f6d7b8"/>
+  <rect x="345" y="610" width="110" height="130" rx="18" fill="#f6d7b8"/>
+  <rect x="470" y="610" width="110" height="130" rx="18" fill="#f6d7b8"/>
+  <path d="M240 680 L270 620 L300 680 Z" fill="#ffffff" opacity="0.9"/>
+  <path d="M365 680 L395 620 L425 680 Z" fill="#ffffff" opacity="0.9"/>
+  <path d="M490 680 L520 620 L550 680 Z" fill="#ffffff" opacity="0.9"/>
+  <path d="M180 260 L230 180 L260 260" fill="#f8f0e8" opacity="0.85"/>
+  <path d="M560 260 L610 180 L640 260" fill="#f8f0e8" opacity="0.85"/>
+</svg>

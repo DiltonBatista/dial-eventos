@@ -11,6 +11,9 @@
 // - Subtotal por item (opcional/progressivo — só ativa se o HTML tiver o elemento)
 // - Validação de data também no submit (defesa em profundidade, não só no atributo min)
 
+// Diagnostic: log when the script file is fetched (helps when console filters hide debug)
+console.log('static/scripts.js loaded');
+
 (function () {
   "use strict";
 
@@ -252,5 +255,74 @@
     setupFiltroPedido();
     setupConfirmacoes();
     setupValidacaoData();
+    setupTestimonialsModal();
   });
+
+  // ---- Modal de depoimentos (abre o conteúdo de testimonials em modal)
+  function setupTestimonialsModal() {
+    console.debug('setupTestimonialsModal: init');
+    const overlay = document.querySelector('.hero-video-overlay');
+    const testimonials = document.querySelector('#testimonials');
+    if (!overlay || !testimonials) return;
+    console.debug('setupTestimonialsModal: overlay and testimonials found', { overlay: !!overlay, testimonials: !!testimonials });
+
+    function buildModal() {
+      const backdrop = document.createElement('div');
+      backdrop.className = 'modal-backdrop';
+      backdrop.tabIndex = -1;
+
+      const modal = document.createElement('div');
+      modal.className = 'modal';
+      modal.setAttribute('role', 'dialog');
+      modal.setAttribute('aria-modal', 'true');
+      modal.setAttribute('aria-label', 'Depoimentos dos clientes');
+
+      const close = document.createElement('button');
+      close.className = 'close-btn';
+      close.innerHTML = '✕';
+      close.addEventListener('click', () => closeModal());
+
+      // clone testimonials content to modal
+      const content = testimonials.cloneNode(true);
+      content.id = '';
+      modal.appendChild(close);
+      modal.appendChild(content);
+      backdrop.appendChild(modal);
+
+      backdrop.addEventListener('click', (ev) => {
+        if (ev.target === backdrop) closeModal();
+      });
+
+      document.addEventListener('keydown', onKeyDown);
+
+      function onKeyDown(ev) {
+        if (ev.key === 'Escape') closeModal();
+      }
+
+      function openModal() {
+        document.body.appendChild(backdrop);
+        // focus first focusable element inside modal
+        const focusable = modal.querySelector('button, [href], input, textarea, select, [tabindex]');
+        if (focusable) focusable.focus();
+      }
+
+      function closeModal() {
+        try {
+          document.removeEventListener('keydown', onKeyDown);
+          backdrop.remove();
+        } catch (e) {}
+      }
+
+      return { openModal, closeModal };
+    }
+
+    const modalApi = buildModal();
+
+    overlay.addEventListener('click', (ev) => {
+      console.debug('hero overlay clicked', ev);
+      // prefer abrir modal em vez de navegar; mantém href como fallback
+      ev.preventDefault();
+      modalApi.openModal();
+    });
+  }
 })();

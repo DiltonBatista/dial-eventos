@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" role="img" aria-label="Evento corporativo e premium">
+  <defs>
+    <linearGradient id="bg7" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#e5f2f7"/>
+      <stop offset="50%" stop-color="#bddbdf"/>
+      <stop offset="100%" stop-color="#96b7d8"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="1000" fill="url(#bg7)"/>
+  <rect x="120" y="300" width="560" height="350" rx="30" fill="#ffffff" opacity="0.86"/>
+  <rect x="170" y="350" width="160" height="170" rx="16" fill="#dfeaf3"/>
+  <rect x="360" y="350" width="260" height="25" rx="8" fill="#90afcf"/>
+  <rect x="360" y="395" width="220" height="20" rx="8" fill="#cfe2ef"/>
+  <rect x="360" y="435" width="240" height="20" rx="8" fill="#dfeaf3"/>
+  <rect x="360" y="475" width="190" height="20" rx="8" fill="#dfeaf3"/>
+  <circle cx="250" cy="435" r="52" fill="#f6d69d"/>
+  <path d="M228 520 L250 480 L272 520" fill="#ebeff5"/>
+  <rect x="120" y="690" width="560" height="110" rx="20" fill="#f7fbff" opacity="0.8"/>
+  <circle cx="220" cy="745" r="20" fill="#f1b768"/>
+  <circle cx="400" cy="745" r="20" fill="#f1b768"/>
+  <circle cx="580" cy="745" r="20" fill="#f1b768"/>
+</svg>

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" role="img" aria-label="Evento corporativo moderno">
+  <defs>
+    <linearGradient id="bg3" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#dfeef9"/>
+      <stop offset="50%" stop-color="#b8d8ed"/>
+      <stop offset="100%" stop-color="#9dbad0"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="1000" fill="url(#bg3)"/>
+  <circle cx="640" cy="180" r="120" fill="#f9efd6" opacity="0.7"/>
+  <rect x="110" y="290" width="580" height="420" rx="26" fill="#f5fbff" opacity="0.85"/>
+  <rect x="160" y="340" width="180" height="160" rx="14" fill="#dfe8ef"/>
+  <rect x="370" y="340" width="270" height="32" rx="10" fill="#9dbad0"/>
+  <rect x="370" y="392" width="200" height="22" rx="10" fill="#bcd6e7"/>
+  <rect x="370" y="432" width="230" height="22" rx="10" fill="#dceaf5"/>
+  <rect x="370" y="470" width="180" height="22" rx="10" fill="#dceaf5"/>
+  <circle cx="230" cy="430" r="56" fill="#fff2d3"/>
+  <path d="M210 390 L230 350 L250 390" fill="#f2d19b"/>
+  <path d="M180 430 L230 390 L280 430" fill="#c7d0da"/>
+  <path d="M160 760 L220 620 L300 760 Z" fill="#ebf1f6" opacity="0.9"/>
+  <path d="M500 760 L560 620 L640 760 Z" fill="#ebf1f6" opacity="0.9"/>
+  <rect x="140" y="715" width="520" height="80" rx="18" fill="#ffffff" opacity="0.72"/>
+  <circle cx="220" cy="760" r="18" fill="#f3bf7a"/>
+  <circle cx="400" cy="760" r="18" fill="#f3bf7a"/>
+  <circle cx="580" cy="760" r="18" fill="#f3bf7a"/>
+</svg>

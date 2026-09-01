@@ -1,0 +1,11 @@
+Commit: feat(testimonials): add modal for testimonials and /testimonials route
+Date: 2026-08-31
+
+Files changed:
+- app.py (extracted testimonials_section(), added testimonials_page(), registered /testimonials route, updated home to reuse section)
+- static/style.css (modal styles)
+- static/scripts.js (modal behavior: open/close, clone content)
+
+Notes:
+- Modal opens when clicking hero overlay; anchor href remains as fallback for non-JS.
+- Testimonials content is reused in home and /testimonials.

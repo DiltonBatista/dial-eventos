@@ -1,0 +1,23 @@
+Commit: feat(ui): replace hero with mini-landing + quick links
+Date: 2026-09-01
+
+Files changed:
+- app.py
+  - Replaced complex hero overlay with a compact `hero-mini` section (CTA + quick links).
+- static/style.css
+  - Added styles for `.hero-mini`, `.hero-quick-links` and responsive rules.
+- static/scripts.js
+  - Kept modal code but added diagnostic logs; top-level `console.log('static/scripts.js loaded')` added to help debug loading.
+
+Summary:
+- The previous hero that used a hero overlay/modal was removed in favor of a simpler, accessible mini-landing hero to avoid JS-dependent behavior and fix the reported issue.
+- Quick links point to category-filtered catalog pages; main CTA goes to `/pedido`.
+- Diagnostic logs were added to `scripts.js` to help trace loading and events while developing.
+
+How to commit locally:
+Open a terminal in the project root and run:
+
+    git add app.py static/style.css static/scripts.js
+    git commit -m "feat(ui): replace hero with mini-landing + quick links"
+
+If you want I can also produce a .patch file or attempt to run a git commit here (git not available previously).

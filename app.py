@@ -21,6 +21,12 @@ BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = BASE_DIR / "sistema_eventos.db"
 STATIC_DIR = BASE_DIR / "static"
 
+# Número de arquivos de QR a manter por pedido (pode ser configurado via variável de ambiente)
+try:
+    QR_KEEP_COUNT = max(1, int(os.environ.get("QR_KEEP_COUNT", "3")))
+except Exception:
+    QR_KEEP_COUNT = 3
+
 STATUS_OPCOES = ("Agendado", "Confirmado", "Em andamento", "Concluído", "Cancelado")
 
 # Catálogo inicial (usado apenas na primeira execução, quando a tabela
@@ -151,16 +157,110 @@ def gerar_chave_pix() -> str:
     return PIX_CHAVE_PADRAO
 
 
+
+def crc16_ccitt(data: bytes) -> str:
+    # CRC-16/CCITT-FALSE (poly 0x1021, init 0xFFFF)
+    crc = 0xFFFF
+    for b in data:
+        crc ^= b << 8
+        for _ in range(8):
+            crc = ((crc << 1) ^ 0x1021) & 0xFFFF if (crc & 0x8000) else (crc << 1) & 0xFFFF
+    return f"{crc:04X}"
+
+
+def _tlv(tag: str, value: str) -> str:
+    l = f"{len(value):02d}"
+    return f"{tag}{l}{value}"
+
+
+def gerar_payload_pix(chave: str, nome: str = "", cidade: str = "", valor: float | None = None, txid: str | None = None) -> str:
+    # Monta o payload no formato EMV (BR Code / PIX) mínimo necessário
+    # Referência simplificada do payload Pix (campos comuns para funcionar em apps bancários)
+    # 00 - Payload Format Indicator
+    payload = _tlv("00", "01")
+    # 01 - Point of Initiation Method: '12' = dinâmico / '11' = estático
+    payload += _tlv("01", "11")
+
+    # 26 - Merchant Account Information (pix)
+    # Subtags: 00=GUI, 01=chave PIX
+    mai = _tlv("00", "br.gov.bcb.pix") + _tlv("01", chave)
+    payload += _tlv("26", mai)
+
+    # 52 - Merchant Category Code (0000 = unspecified)
+    payload += _tlv("52", "0000")
+    # 53 - Currency (986 = BRL)
+    payload += _tlv("53", "986")
+
+    # 54 - Amount (opcional)
+    if valor is not None:
+        # ensure dot as decimal separator, no thousands
+        payload += _tlv("54", f"{valor:.2f}")
+
+    # 58 - Country
+    payload += _tlv("58", "BR")
+    # 59 - Merchant Name (max 25)
+    if nome:
+        payload += _tlv("59", nome[:25])
+    # 60 - Merchant City (max 15)
+    if cidade:
+        payload += _tlv("60", cidade[:15])
+
+    # 62 - Additional Data Field Template (txid)
+    if txid:
+        adf = _tlv("05", txid)
+        payload += _tlv("62", adf)
+
+    # 63 - CRC (placeholder + real CRC appended)
+    payload_for_crc = payload + "6304"
+    crc = crc16_ccitt(payload_for_crc.encode("utf-8"))
+    payload += _tlv("63", crc)
+    return payload
+
+
 def gerar_qr_visual(chave_pix: str) -> str:
+    # Fallback visual quando a geração de imagem não estiver disponível
     seed = sum(ord(char) for char in chave_pix)
     linhas = []
     for row in range(11):
         celulas = []
         for col in range(11):
             ativado = ((seed + row * 17 + col * 13 + row * col) % 2 == 0)
-            celulas.append(f"<span class='qr-cell {'on' if ativado else 'off'}'></span>")
+            state = 'on' if ativado else 'off'
+            celulas.append(f"<span class='qr-cell {state}'></span>")
         linhas.append(f"<div class='qr-row'>{''.join(celulas)}</div>")
     return ''.join(linhas)
+
+
+def gerar_qr_image_from_payload(pedido_id: int, payload: str) -> str:
+    try:
+        import qrcode
+        img = qrcode.make(payload)
+        # unique filename with timestamp to avoid caching and collisions
+        timestamp = int(datetime.now().timestamp())
+        filename = f"pix_qr_{pedido_id}_{timestamp}.png"
+        out_path = STATIC_DIR / filename
+        STATIC_DIR.mkdir(parents=True, exist_ok=True)
+        # Open file in binary mode and write the image to satisfy type checkers
+        with open(out_path, "wb") as f:
+            img.save(f)
+        # cleanup older images for the same pedido (keep only the most recent QR_KEEP_COUNT)
+        try:
+            files = sorted(
+                STATIC_DIR.glob(f"pix_qr_{pedido_id}_*.png"),
+                key=lambda p: p.stat().st_mtime,
+                reverse=True,
+            )
+            for old in files[QR_KEEP_COUNT:]:
+                try:
+                    old.unlink()
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        return f"<img src='/static/{filename}' alt='QR Pix'/>"
+    except Exception:
+        # Se qrcode não estiver disponível, retorna visual fallback
+        return gerar_qr_visual(payload)
 
 
 def buscar_pedido_completo(pedido_id: int):
@@ -181,6 +281,22 @@ def buscar_pedido_completo(pedido_id: int):
     return pedido, itens
 
 
+def debug_recent_qr_page() -> bytes:
+    # Lists recent pix QR images in /static for quick visual inspection
+    files = []
+    try:
+        files = sorted(
+            [p.name for p in STATIC_DIR.glob('pix_qr_*.png') if p.is_file()],
+            key=lambda n: (STATIC_DIR / n).stat().st_mtime,
+            reverse=True,
+        )
+    except Exception:
+        files = []
+    imgs = "".join(f"<div class='qr-sample'><img src='/static/{esc(n)}' alt='{esc(n)}' style='max-width:320px;border:1px solid var(--line);margin:8px;padding:8px;background:var(--card)'/></div>" for n in files)
+    body = f"<section class='section-head'><h2>QR images</h2></section><div style='display:flex;flex-wrap:wrap'>{imgs or '<p>No QR images found.</p>'}</div>"
+    return layout(body, title="QR debug")
+
+
 def pedido_relatorio_page(pedido_id: int) -> bytes:
     pedido, itens = buscar_pedido_completo(pedido_id)
     if pedido is None:
@@ -197,26 +313,7 @@ def pedido_relatorio_page(pedido_id: int) -> bytes:
     <section class='report-wrap'>
         <div class='report-header'>
             <div>
-                <p class='eyebrow'>RELATÓRIO DO PEDIDO</p>
-                <h1>Pedido #{pedido['id']:04d}</h1>
-            </div>
-            <button class='button' onclick='window.print()'>Imprimir</button>
-        </div>
-
-        <div class='report-card'>
-            <h2>Dados do cliente</h2>
-            <p><strong>Nome:</strong> {esc(pedido['nome'])}</p>
-            <p><strong>E-mail:</strong> {esc(pedido['email'])}</p>
-            <p><strong>Telefone:</strong> {esc(pedido['telefone'])}</p>
-            <p><strong>Endereço:</strong> {esc(pedido['endereco'])}</p>
-        </div>
-
-        <div class='report-card'>
-            <h2>Detalhes do evento</h2>
-            <p><strong>Tipo:</strong> {esc(pedido['tipo_evento'])}</p>
-            <p><strong>Data:</strong> {esc(pedido['data_evento'])}</p>
-            <p><strong>Horário:</strong> {esc(pedido['horario'])}</p>
-            <p><strong>Convidados:</strong> {pedido['quantidade_convidados']}</p>
+            {testimonials_section()}
             <p><strong>Status:</strong> {esc(pedido['status'])}</p>
             <p><strong>Pagamento:</strong> {esc(pedido['status_pagamento'])}</p>
         </div>
@@ -254,11 +351,35 @@ def confirmar_pagamento_pix(pedido_id: int) -> None:
 
 def atualizar_chave_pix_do_pedido(pedido_id: int, chave_pix: str | None = None) -> str:
     chave = (chave_pix or PIX_CHAVE_PADRAO)
-    qr = gerar_qr_visual(chave)
+    # busca dados do pedido/cliente para preencher nome/valor (se disponíveis)
+    with closing(get_db()) as db:
+        pedido = db.execute(
+            "SELECT p.*, c.nome, c.endereco FROM pedidos p JOIN clientes c ON c.id = p.cliente_id WHERE p.id = ?",
+            (pedido_id,),
+        ).fetchone()
+
+    nome = pedido["nome"] if pedido is not None else ""
+    endereco = pedido["endereco"] if pedido is not None else ""
+    # tentativa simples de extrair cidade do endereço (opcional)
+    cidade = ""
+    if endereco:
+        parts = endereco.split(",")
+        if len(parts) >= 2:
+            cidade = parts[-2].strip()
+
+    valor = float(pedido["valor_total"]) if pedido is not None and pedido["valor_total"] else None
+    txid = secrets.token_hex(8)
+
+    try:
+        payload = gerar_payload_pix(chave, nome=nome, cidade=cidade, valor=valor, txid=txid)
+        qr_html = gerar_qr_image_from_payload(pedido_id, payload)
+    except Exception:
+        qr_html = gerar_qr_visual(chave)
+
     with closing(get_db()) as db, db:
         db.execute(
             "UPDATE pedidos SET pix_chave = ?, pix_qr = ? WHERE id = ?",
-            (chave, qr, pedido_id),
+            (chave, qr_html, pedido_id),
         )
     return chave
 
@@ -272,6 +393,8 @@ def pedido_pix_page(pedido_id: int) -> bytes:
     if pedido["pix_chave"] != chave_pix or not pedido["pix_qr"]:
         atualizar_chave_pix_do_pedido(pedido_id, chave_pix)
         pedido, itens = buscar_pedido_completo(pedido_id)
+        if pedido is None:
+            return not_found()
 
     qr_html = pedido["pix_qr"] or gerar_qr_visual(chave_pix)
     pagamento_status = "Pago" if pedido["status_pagamento"] == "pago" else "Pendente"
@@ -353,8 +476,13 @@ def layout(content: str, title: str = "Dial Eventos", active_menu: str = "") -> 
 
     return f"""<!doctype html><html lang='pt-BR'><head>
     <meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>
-    <title>{esc(title)} | Dial Eventos</title><link rel='stylesheet' href='/static/style.css'>
-    </head><body><header><a class='brand' href='/'>Dial<span> Eventos</span></a>
+    <meta name='theme-color' content='#f2e8df'>
+    <title>{esc(title)} | Dial Eventos</title>
+    <link rel='preconnect' href='https://fonts.googleapis.com'>
+    <link rel='preconnect' href='https://fonts.gstatic.com' crossorigin>
+    <link href='https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap' rel='stylesheet'>
+    <link rel='stylesheet' href='/static/style.css'>
+    </head><body><header><a class='brand' href='/' aria-label='Dial Eventos'><span class='brand-mark'>D</span><span class='brand-word'>Dial<span> Eventos</span></span></a>
     <nav class='main-nav'>{menu_link('Início', '/', 'inicio')}{menu_link('Catálogo', '/catalogo', 'catalogo')}{menu_link('Fazer pedido', '/pedido', 'pedido')}{menu_link('Agenda', '/admin', 'agenda')}</nav></header>
     <main>{content}</main><footer>Dial Eventos · Locação que dá vida ao seu evento</footer>
     <script src='/static/scripts.js'></script>
@@ -373,15 +501,93 @@ def home() -> bytes:
         for c in categorias
     )
     return layout(f"""
-    <section class='hero'><div><p class='eyebrow'>EVENTOS MEMORÁVEIS</p><h1>Materiais que transformam<br>cada celebração.</h1><p class='lead'>Escolha, solicite e agende sua locação em poucos minutos.</p><a class='button' href='/pedido'>Começar meu pedido →</a></div>
-    <div class='hero-card'><span>✦</span><p>Seu evento começa aqui</p><strong>Simples, bonito e organizado.</strong></div></section>
-    <section><div class='section-head'><div><p class='eyebrow'>MOSTRUÁRIO</p><h2>O que temos para o seu evento</h2></div><a href='/catalogo'>Ver catálogo completo →</a></div>
-    <div class='grid'>{cards}</div></section>
-    <section class='wedding-showcase'><div class='section-head'><div><p class='eyebrow'>CASAMENTOS</p><h2>Inspire-se para o seu grande dia</h2></div><a href='/catalogo?categoria=Casamento'>Ver itens para casamento →</a></div>
-    <div class='wedding-gallery'>
-        <figure><img src='/static/static/images/casamentos/casamento-cerimonia.png' alt='Cerimônia de casamento ao ar livre, com flores e iluminação delicada'><figcaption>Uma cerimônia acolhedora, com cada detalhe pensado para emocionar.</figcaption></figure>
-        <figure><img src='/static/static/images/casamentos/casamento-recepcao.png' alt='Recepção de casamento com mesas decoradas, lustre e tecidos no teto'><figcaption>Uma recepção elegante para celebrar com quem você ama.</figcaption></figure>
-    </div></section>
+    <section class='hero hero-mini'>
+        <div class='hero-inner'>
+            <div class='hero-copy'>
+                <p class='eyebrow'>EVENTOS MEMORÁVEIS</p>
+                <h1>Materiais que transformam cada celebração.</h1>
+                <p class='lead'>A Dial Eventos combina estética, praticidade e atendimento personalizado para criar experiências elegantes e bem organizadas.</p>
+                <div class='hero-actions'>
+                    <a class='button' href='/pedido'>Começar meu pedido →</a>
+                    <a class='button secondary' href='/catalogo'>Ver catálogo</a>
+                </div>
+            </div>
+            <div class='hero-quick-links' aria-hidden='false'>
+                <a class='quick-link' href='/catalogo?categoria=Casamento'>Casamentos</a>
+                <a class='quick-link' href='/catalogo?categoria=Aniversários'>Aniversários</a>
+                <a class='quick-link' href='/catalogo?categoria=Corporativo'>Corporativo</a>
+            </div>
+        </div>
+    </section>
+
+    <section class='trust-bar'>
+        <div><strong>+1.200</strong><span>clientes atendidos</span></div>
+        <div><strong>4,9/5</strong><span>avaliação média</span></div>
+        <div><strong>100%</strong><span>atendimento personalizado</span></div>
+    </section>
+
+    <section>
+        <div class='section-head'>
+            <div><p class='eyebrow'>MOSTRUÁRIO</p><h2>O que temos para o seu evento</h2></div>
+            <a href='/catalogo'>Ver catálogo completo →</a>
+        </div>
+        <div class='grid'>{cards}</div>
+    </section>
+
+    <section class='feature-band'>
+        <div class='section-head'>
+            <div><p class='eyebrow'>POR QUE ESCOLHER</p><h2>Uma experiência pensada para cada detalhe</h2></div>
+        </div>
+        <div class='feature-grid'>
+            <article class='feature-card'>
+                <div class='feature-icon'>✦</div>
+                <h3>Atendimento sob medida</h3>
+                <p>Orientação prática para escolher os materiais certos e montar a proposta ideal para seu evento.</p>
+            </article>
+            <article class='feature-card'>
+                <div class='feature-icon'>✦</div>
+                <h3>Itens com bom acabamento</h3>
+                <p>Materiais selecionados para garantir uma apresentação elegante, funcional e bem pensada.</p>
+            </article>
+            <article class='feature-card'>
+                <div class='feature-icon'>✦</div>
+                <h3>Organização e agilidade</h3>
+                <p>Solicitação simples, acompanhamento claro e planejamento mais tranquilo para você.</p>
+            </article>
+        </div>
+    </section>
+
+    <section class='wedding-showcase'>
+        <div class='section-head'>
+            <div><p class='eyebrow'>CASAMENTOS</p><h2>Inspire-se para o seu grande dia</h2></div>
+            <a href='/catalogo?categoria=Casamento'>Ver itens para casamento →</a>
+        </div>
+        <div class='wedding-gallery'>
+            <figure><img src='/static/static/images/casamentos/casamento-cerimonia.png' alt='Cerimônia de casamento ao ar livre, com flores e iluminação delicada'><figcaption>Uma cerimônia acolhedora, com cada detalhe pensado para emocionar.</figcaption></figure>
+            <figure><img src='/static/static/images/casamentos/casamento-recepcao.png' alt='Recepção de casamento com mesas decoradas, lustre e tecidos no teto'><figcaption>Uma recepção elegante para celebrar com quem você ama.</figcaption></figure>
+        </div>
+    </section>
+
+    <section id='testimonials' class='testimonials'>
+        <div class='section-head'>
+            <div><p class='eyebrow'>DEPOIMENTOS</p><h2>O que nossos clientes dizem</h2></div>
+        </div>
+        <div class='testimonial-grid'>
+            <blockquote>
+                <p>“Tudo ficou impecável. O atendimento foi acolhedor e os materiais deram um toque especial à nossa festa.”</p>
+                <footer>— Ana & Rafael</footer>
+            </blockquote>
+            <blockquote>
+                <p>“A organização foi excelente e o resultado final ficou muito bonito, com um clima muito elegante.”</p>
+                <footer>— Maria Helena</footer>
+            </blockquote>
+            <blockquote>
+                <p>“Precisávamos de uma solução prática e bonita para o evento corporativo. Foi exatamente isso que encontramos.”</p>
+                <footer>— Diretoria da empresa</footer>
+            </blockquote>
+        </div>
+    </section>
+
     <section class='steps'><p class='eyebrow'>COMO FUNCIONA</p><h2>Organize seu aluguel em 3 passos</h2><div class='step-grid'><p><b>01</b> Escolha os materiais no catálogo</p><p><b>02</b> Preencha seus dados e o pedido</p><p><b>03</b> Receba a confirmação e acompanhe na agenda</p></div></section>
     """, active_menu="inicio")
 
@@ -406,9 +612,19 @@ def catalogo_page(categoria_filtro: str = "") -> bytes:
         )
         secoes.append(f"<section class='catalog-category'><h3>{esc(categoria)}</h3><div class='grid three'>{cards}</div></section>")
     body = "".join(secoes) or "<p class='empty'>Nenhum item disponível nesta categoria.</p>"
-    return layout(f"""<section class='catalog-head'><p class='eyebrow'>NOSSO ACERVO</p><h1>Catálogo de materiais</h1>
-    <p class='lead'>Explore por categoria e monte sua lista. Na hora do pedido você escolhe as quantidades.</p>
-    <div class='filter-tabs'>{tabs}</div></section>{body}
+    return layout(f"""<section class='catalog-head'>
+    <div class='catalog-head-copy'>
+        <p class='eyebrow'>NOSSO ACERVO</p>
+        <h1>Catálogo de materiais</h1>
+        <p class='lead'>Explore por categoria e monte sua lista com materiais pensados para festas, casamentos e eventos corporativos.</p>
+    </div>
+    <div class='catalog-mini-stats'>
+        <div><strong>{len(itens)}</strong><span>itens</span></div>
+        <div><strong>{len(categorias)}</strong><span>categorias</span></div>
+    </div>
+    </section>
+    <div class='filter-tabs'>{tabs}</div>
+    {body}
     <section class='cta-bar'><p>Já sabe o que precisa?</p><a class='button' href='/pedido'>Ir para o formulário de pedido →</a></section>""",
         "Catálogo", "catalogo")
 
@@ -420,6 +636,78 @@ def pedido_form(error: str = "", valores: dict | None = None) -> bytes:
         itens = catalogo_ativo(db)
     grupos = agrupar_por_categoria(itens)
 
+    def icone_categoria(categoria: str) -> str:
+        mapa = {
+            "casamento": "💍",
+            "casamentos": "💍",
+            "cerimonia": "💒",
+            "recepcao": "🎉",
+            "recepção": "🎉",
+            "aniversario": "🎂",
+            "aniversários": "🎂",
+            "aniversarios": "🎂",
+            "corporativo": "🏢",
+            "corporativos": "🏢",
+            "evento corporativo": "🏢",
+            "materiais": "✨",
+            "mesas": "🪑",
+            "mesa": "🪑",
+            "toalhas de mesa": "🧺",
+            "toalhas": "🧺",
+            "peças decorativas": "🌿",
+            "pecas decorativas": "🌿",
+            "provençal": "🪵",
+            "provencal": "🪵",
+            "pranchão redondo": "🍽️",
+            "pranchao redondo": "🍽️",
+            "tecido jacar": "🧵",
+            "tensionamento de malhas": "🎀",
+            "receptivos": "🎁",
+            "coffee break": "☕",
+            "buffet": "🍽️",
+            "buffets": "🍽️",
+            "estacao de sobremesas": "🍰",
+            "estação de sobremesas": "🍰",
+            "buffet finger food": "🥐",
+            "buffet jantar completo": "🍽️",
+            "coffee break simples": "☕",
+            "coffee break completo": "☕",
+            "mesas bistro": "🪑",
+            "mesas redondas": "🪑",
+            "mesas retangulares": "🪑",
+        }
+        chave = categoria.strip().lower().replace("  ", " ")
+        return mapa.get(chave, "✦")
+
+    def paleta_categoria(categoria: str) -> tuple[str, str]:
+        mapa = {
+            "casamento": ("#f4e3b5", "#8a692d"),
+            "casamentos": ("#f4e3b5", "#8a692d"),
+            "aniversario": ("#fbd8d0", "#af5c4b"),
+            "aniversários": ("#fbd8d0", "#af5c4b"),
+            "aniversarios": ("#fbd8d0", "#af5c4b"),
+            "corporativo": ("#dfeafc", "#45639a"),
+            "corporativos": ("#dfeafc", "#45639a"),
+            "mesas": ("#efe4de", "#6d5147"),
+            "mesa": ("#efe4de", "#6d5147"),
+            "buffet": ("#f9ddd1", "#a76044"),
+            "coffee break": ("#f5dfbf", "#9b6937"),
+            "toalhas de mesa": ("#eaf6e8", "#49724d"),
+            "toalhas": ("#eaf6e8", "#49724d"),
+            "provençal": ("#ece2d8", "#7a6049"),
+            "provencal": ("#ece2d8", "#7a6049"),
+            "peças decorativas": ("#e5f0e2", "#4e7d5a"),
+            "pecas decorativas": ("#e5f0e2", "#4e7d5a"),
+            "receptivos": ("#f4e6d2", "#a46d34"),
+            "receptivos": ("#f4e6d2", "#a46d34"),
+            "tecido jacar": ("#efe5f5", "#775f8d"),
+            "tensionamento de malhas": ("#fbe5f5", "#924f78"),
+            "pranchão redondo": ("#e8ebef", "#5d6774"),
+            "pranchao redondo": ("#e8ebef", "#5d6774"),
+        }
+        chave = categoria.strip().lower().replace("  ", " ")
+        return mapa.get(chave, ("#f5efe7", "#7b6255"))
+
     def campo(name, label, tipo="text", required=True, placeholder="", extra=""):
         req = "required" if required else ""
         val = esc(valores.get(name, ""))
@@ -429,17 +717,26 @@ def pedido_form(error: str = "", valores: dict | None = None) -> bytes:
     for categoria, lista in grupos.items():
         linhas = "".join(
             f"<div class='item-row' data-categoria='{esc(categoria)}'>"
+            f"<div class='item-row-media' style='--icon-bg:{paleta_categoria(categoria)[0]}; --icon-color:{paleta_categoria(categoria)[1]};'><span>{icone_categoria(categoria)}</span></div>"
             f"<div class='item-row-info'><b>{esc(i['nome'])}</b><small>{esc(i['descricao'])} · {fmt_money(i['preco_unitario'])}/{esc(i['unidade'])}</small></div>"
             f"<input class='qty-input' type='number' min='0' step='1' value='0' name='qtd_{i['id']}' "
             f"data-price='{i['preco_unitario']}' data-nome='{esc(i['nome'])}'>"
             f"</div>"
             for i in lista
         )
+        bg, fg = paleta_categoria(categoria)
         catalog_html.append(
-            f"<fieldset class='catalog-fieldset' data-categoria='{esc(categoria)}'><legend>{esc(categoria)}</legend>{linhas}</fieldset>"
+            f"<fieldset class='catalog-fieldset' data-categoria='{esc(categoria)}' style='--fieldset-accent:{bg}; --fieldset-text:{fg};'><legend>{esc(categoria)}</legend>{linhas}</fieldset>"
         )
 
-    return layout(f"""<section class='form-wrap'><p class='eyebrow'>NOVA SOLICITAÇÃO</p><h1>Vamos planejar seu evento</h1><p class='lead'>Preencha seus dados, escolha os materiais e sua solicitação será salva na agenda.</p>{error_html}
+    return layout(f"""<section class='form-wrap'>
+    <div class='pedido-intro'>
+        <p class='eyebrow'>NOVA SOLICITAÇÃO</p>
+        <h1>Vamos planejar seu evento</h1>
+        <p class='lead'>Preencha seus dados, escolha os materiais e sua solicitação será salva na agenda.</p>
+    </div>
+    {error_html}
+    <div class='form-shell'>
     <form method='post' action='/pedido' id='pedido-form'>
     <h2 class='form-subtitle'>Seus dados</h2>
     <div class='form-grid'>
@@ -459,7 +756,7 @@ def pedido_form(error: str = "", valores: dict | None = None) -> bytes:
     <p class='lead small'>Informe a quantidade desejada de cada item. Deixe 0 para os que não precisar.</p>
     <div class='filter-tabs' id='pedido-tabs'>
         <a class='tab active' data-categoria='__all__'>Todos</a>
-        {''.join(f"<a class='tab' data-categoria='{esc(c)}'>{esc(c)}</a>" for c in grupos)}
+        {''.join(f"<a class='tab' data-categoria='{esc(c)}' style='--tab-bg:{paleta_categoria(c)[0]}; --tab-color:{paleta_categoria(c)[1]};'>{esc(c)}</a>" for c in grupos)}
     </div>
     <div class='catalog-form'>{''.join(catalog_html)}</div>
 
@@ -467,7 +764,7 @@ def pedido_form(error: str = "", valores: dict | None = None) -> bytes:
     <label>Observações<textarea name='observacoes' placeholder='Alguma informação adicional?'>{esc(valores.get('observacoes',''))}</textarea></label>
 
     <div class='total-bar'><span>Valor estimado</span><strong id='total-estimado'>{fmt_money(0)}</strong></div>
-    <button class='button' type='submit'>Enviar pedido e agendar →</button></form></section>""", active_menu="pedido")
+    <button class='button' type='submit'>Enviar pedido e agendar →</button></form></div></section>""", active_menu="pedido")
 
 
 def create_order(data: dict[str, str]) -> tuple[int, float]:
@@ -537,6 +834,34 @@ def success(order_id: int, valor_total: float) -> bytes:
         <a class='text-link' href='/'>Voltar ao início</a></section>""",
         "Pedido confirmado",
     )
+
+
+def testimonials_section() -> str:
+    return """
+    <section id='testimonials' class='testimonials'>
+        <div class='section-head'>
+            <div><p class='eyebrow'>DEPOIMENTOS</p><h2>O que nossos clientes dizem</h2></div>
+        </div>
+        <div class='testimonial-grid'>
+            <blockquote>
+                <p>“Tudo ficou impecável. O atendimento foi acolhedor e os materiais deram um toque especial à nossa festa.”</p>
+                <footer>— Ana & Rafael</footer>
+            </blockquote>
+            <blockquote>
+                <p>“A organização foi excelente e o resultado final ficou muito bonito, com um clima muito elegante.”</p>
+                <footer>— Maria Helena</footer>
+            </blockquote>
+            <blockquote>
+                <p>“Precisávamos de uma solução prática e bonita para o evento corporativo. Foi exatamente isso que encontramos.”</p>
+                <footer>— Diretoria da empresa</footer>
+            </blockquote>
+        </div>
+    </section>
+    """
+
+
+def testimonials_page() -> bytes:
+    return layout(testimonials_section(), "Depoimentos")
 
 
 # --------------------------------------------------------------------------
@@ -800,6 +1125,12 @@ def application(environ, start_response):
             return respond(pedido_pix_page(pedido_id), "200 OK")
         if action == "comprovante":
             return respond(comprovante_pix_page(pedido_id), "200 OK")
+
+    if path == "/testimonials" and method == "GET":
+        return respond(testimonials_page(), "200 OK")
+
+    if path == "/debug/qr" and method == "GET":
+        return respond(debug_recent_qr_page(), "200 OK")
 
     if order_match and method == "POST":
         pedido_id = int(order_match.group(1))

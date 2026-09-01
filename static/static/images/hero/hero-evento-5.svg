@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" role="img" aria-label="Evento com decoração sofisticada">
+  <defs>
+    <linearGradient id="bg5" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#f7d8d8"/>
+      <stop offset="45%" stop-color="#d89aa0"/>
+      <stop offset="100%" stop-color="#b58abc"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="1000" fill="url(#bg5)"/>
+  <circle cx="200" cy="180" r="110" fill="#fce9cf" opacity="0.72"/>
+  <circle cx="640" cy="200" r="130" fill="#f8ebff" opacity="0.85"/>
+  <path d="M0 760 C150 720, 240 780, 400 740 S640 700, 800 770 L800 1000 L0 1000 Z" fill="#7a5d6c" opacity="0.25"/>
+  <rect x="120" y="340" width="560" height="260" rx="26" fill="#fff8f7" opacity="0.88"/>
+  <path d="M230 330 L230 240 M190 270 L270 270 M200 190 L260 190" stroke="#fdf4f0" stroke-width="8" stroke-linecap="round" fill="none"/>
+  <path d="M570 330 L570 240 M530 270 L610 270 M540 190 L600 190" stroke="#fdf4f0" stroke-width="8" stroke-linecap="round" fill="none"/>
+  <rect x="240" y="420" width="120" height="130" rx="15" fill="#f2d5c9"/>
+  <rect x="380" y="420" width="120" height="130" rx="15" fill="#f2d5c9"/>
+  <rect x="520" y="420" width="120" height="130" rx="15" fill="#f2d5c9"/>
+  <circle cx="300" cy="450" r="32" fill="#f6f0de"/>
+  <circle cx="440" cy="450" r="32" fill="#f6f0de"/>
+  <circle cx="580" cy="450" r="32" fill="#f6f0de"/>
+  <path d="M160 730 L240 620 L330 730 Z" fill="#f8e9de" opacity="0.8"/>
+  <path d="M470 730 L550 620 L640 730 Z" fill="#f8e9de" opacity="0.8"/>
+  <rect x="170" y="730" width="460" height="90" rx="18" fill="#fef7f6" opacity="0.78"/>
+</svg>
