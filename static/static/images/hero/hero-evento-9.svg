@@ -1,0 +1,23 @@
+<svg width="1200" height="760" viewBox="0 0 1200 760" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg9" x1="0" y1="0" x2="1200" y2="760" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F9E7D7"/>
+      <stop offset="1" stop-color="#F2B69F"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="760" fill="url(#bg9)"/>
+  <circle cx="990" cy="120" r="110" fill="#F8D58F" fill-opacity="0.55"/>
+  <rect y="500" width="1200" height="260" fill="#B86C54" fill-opacity="0.18"/>
+  <rect x="90" y="170" width="320" height="220" rx="24" fill="#FDF7F4" fill-opacity="0.9"/>
+  <rect x="126" y="206" width="248" height="148" rx="18" fill="#E5B59D"/>
+  <rect x="150" y="230" width="200" height="18" rx="9" fill="#F8EDE8"/>
+  <rect x="150" y="270" width="164" height="16" rx="8" fill="#F7D8CF"/>
+  <rect x="150" y="300" width="178" height="16" rx="8" fill="#F2C8B2"/>
+  <circle cx="690" cy="270" r="152" fill="#FDF7F3" fill-opacity="0.8"/>
+  <circle cx="690" cy="270" r="122" fill="#E7B0A7" fill-opacity="0.92"/>
+  <path d="M642 360C668 320 706 295 750 288C784 282 822 286 856 308C891 329 915 362 921 405C843 431 758 430 690 422C667 394 650 374 642 360Z" fill="#F4D6B1" fill-opacity="0.9"/>
+  <path d="M640 318L722 244L781 180L846 244L922 318L754 318H640Z" fill="#F7E6D9" fill-opacity="0.88"/>
+  <path d="M750 225L760 271H709L750 225Z" fill="#F09E85"/>
+  <rect x="0" y="640" width="1200" height="120" fill="#FBEAE0" fill-opacity="0.66"/>
+  <text x="100" y="690" fill="#4C3B31" font-family="Arial, sans-serif" font-size="44" font-weight="700">Casamento</text>
+</svg>

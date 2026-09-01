@@ -1,0 +1,20 @@
+<svg width="1200" height="760" viewBox="0 0 1200 760" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg12" x1="0" y1="0" x2="1200" y2="760" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#E9E2D6"/>
+      <stop offset="1" stop-color="#D5BDA9"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="760" fill="url(#bg12)"/>
+  <rect x="120" y="150" width="960" height="440" rx="32" fill="#FFF9F4" fill-opacity="0.7"/>
+  <rect x="180" y="250" width="200" height="180" rx="18" fill="#E9D2B5"/>
+  <rect x="420" y="230" width="210" height="200" rx="18" fill="#C9AD86"/>
+  <rect x="680" y="250" width="200" height="180" rx="18" fill="#E2BFB5"/>
+  <circle cx="280" cy="238" r="52" fill="#F7E7A5"/>
+  <circle cx="528" cy="215" r="52" fill="#F8E7D6"/>
+  <circle cx="780" cy="238" r="52" fill="#F7D7C7"/>
+  <rect x="220" y="520" width="780" height="16" rx="8" fill="#D5B39F"/>
+  <rect x="220" y="548" width="540" height="16" rx="8" fill="#E5C6AB"/>
+  <path d="M0 614C174 572 267 562 410 598C556 635 720 642 883 610C1030 580 1110 570 1200 591V760H0V614Z" fill="#F2E9E2"/>
+  <text x="100" y="690" fill="#5D463D" font-family="Arial, sans-serif" font-size="44" font-weight="700">Formatura</text>
+</svg>

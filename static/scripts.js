@@ -250,11 +250,77 @@ console.log('static/scripts.js loaded');
     });
   }
 
+  function setupPlannerPanel() {
+    const options = document.querySelectorAll('.planner-option');
+    const titleEl = document.getElementById('planner-title');
+    const textEl = document.getElementById('planner-text');
+    const linkEl = document.getElementById('planner-link');
+    const countEl = document.getElementById('planner-count');
+
+    if (!options.length || !titleEl || !textEl || !linkEl || !countEl) return;
+
+    const summaries = {
+      Casamento: 'Materiais essenciais',
+      Aniversários: 'Itens para festa',
+      Corporativo: 'Estrutura para evento',
+    };
+
+    options.forEach((option) => {
+      option.addEventListener('click', () => {
+        options.forEach((btn) => btn.classList.toggle('is-active', btn === option));
+        titleEl.textContent = option.dataset.title || option.dataset.category;
+        textEl.textContent = option.dataset.text || '';
+        linkEl.href = option.dataset.url || '/catalogo';
+        countEl.textContent = summaries[option.dataset.category] || 'Materiais essenciais';
+      });
+    });
+  }
+
+  function setupHeroSlider() {
+    const gallery = document.querySelector('.hero-gallery');
+    if (!gallery) return;
+
+    const slides = Array.from(gallery.querySelectorAll('.hero-slide'));
+    const dots = Array.from(document.querySelectorAll('.hero-dot'));
+    if (!slides.length) return;
+
+    let activeIndex = 0;
+    let intervalId = null;
+
+    function renderSlide(index) {
+      activeIndex = (index + slides.length) % slides.length;
+      slides.forEach((slide, slideIndex) => {
+        slide.classList.toggle('is-active', slideIndex === activeIndex);
+      });
+      dots.forEach((dot, dotIndex) => {
+        dot.classList.toggle('is-active', dotIndex === activeIndex);
+        dot.setAttribute('aria-pressed', dotIndex === activeIndex ? 'true' : 'false');
+      });
+    }
+
+    function startLoop() {
+      if (intervalId) clearInterval(intervalId);
+      intervalId = setInterval(() => renderSlide(activeIndex + 1), 3200);
+    }
+
+    dots.forEach((dot) => {
+      dot.addEventListener('click', () => {
+        renderSlide(Number(dot.dataset.slide) || 0);
+        startLoop();
+      });
+    });
+
+    renderSlide(0);
+    startLoop();
+  }
+
   document.addEventListener("DOMContentLoaded", () => {
     setupTotalEstimado();
     setupFiltroPedido();
     setupConfirmacoes();
     setupValidacaoData();
+    setupPlannerPanel();
+    setupHeroSlider();
     setupTestimonialsModal();
   });
 

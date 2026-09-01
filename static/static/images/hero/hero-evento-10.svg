@@ -1,0 +1,20 @@
+<svg width="1200" height="760" viewBox="0 0 1200 760" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg10" x1="0" y1="0" x2="1200" y2="760" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F3E1D9"/>
+      <stop offset="1" stop-color="#C6D7E8"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="760" fill="url(#bg10)"/>
+  <circle cx="210" cy="146" r="112" fill="#F4D89E" fill-opacity="0.62"/>
+  <rect x="80" y="262" width="1040" height="260" rx="20" fill="#FDFDFC" fill-opacity="0.66"/>
+  <rect x="150" y="320" width="320" height="130" rx="18" fill="#D7E4EC"/>
+  <rect x="510" y="300" width="270" height="150" rx="18" fill="#D8C3A2"/>
+  <rect x="830" y="318" width="200" height="130" rx="18" fill="#EABEA2"/>
+  <circle cx="738" cy="282" r="80" fill="#F7EEC9"/>
+  <rect x="704" y="416" width="70" height="104" rx="22" fill="#A49AB5"/>
+  <rect x="180" y="166" width="190" height="22" rx="11" fill="#BFD9E8"/>
+  <rect x="180" y="205" width="150" height="18" rx="9" fill="#D7E6F0"/>
+  <path d="M0 610C170 542 268 542 440 592C613 643 682 646 915 597C1048 570 1116 563 1200 590V760H0V610Z" fill="#E9EFF5"/>
+  <text x="100" y="690" fill="#394B5B" font-family="Arial, sans-serif" font-size="44" font-weight="700">Corporativo</text>
+</svg>

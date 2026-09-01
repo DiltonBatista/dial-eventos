@@ -500,23 +500,100 @@ def home() -> bytes:
         f"<span><a href='/catalogo?categoria={esc(c['categoria'])}'>Ver itens →</a></span></article>"
         for c in categorias
     )
+    event_gallery = [
+        ("/static/static/images/casamentos/casamento-cerimonia.png", "Casamento ao ar livre"),
+        ("/static/static/images/casamentos/casamento-recepcao.png", "Recepção elegante"),
+        ("/static/images/hero/hero-evento-2.svg", "Aniversário em clima acolhedor"),
+        ("/static/images/hero/hero-evento-6.svg", "Formatura com ambiente sofisticado"),
+        ("/static/images/hero/hero-evento-9.svg", "Evento corporativo premium"),
+        ("/static/images/hero/hero-evento-11.svg", "Decoração premium para celebrações"),
+    ]
+    gallery_items = "".join(
+        f"<figure class='event-card'><img src='{src}' alt='{label}'><figcaption>{label}</figcaption></figure>"
+        for src, label in event_gallery
+    )
+
     return layout(f"""
-    <section class='hero hero-mini'>
-        <div class='hero-inner'>
-            <div class='hero-copy'>
-                <p class='eyebrow'>EVENTOS MEMORÁVEIS</p>
-                <h1>Materiais que transformam cada celebração.</h1>
-                <p class='lead'>A Dial Eventos combina estética, praticidade e atendimento personalizado para criar experiências elegantes e bem organizadas.</p>
-                <div class='hero-actions'>
-                    <a class='button' href='/pedido'>Começar meu pedido →</a>
-                    <a class='button secondary' href='/catalogo'>Ver catálogo</a>
-                </div>
+    <section class='intro-focused'>
+        <div class='intro-copy'>
+            <p class='eyebrow'>EVENTOS MEMORÁVEIS</p>
+            <h1>Materiais que transformam cada celebração.</h1>
+            <p class='lead'>Decoração, estrutura e mobiliário para casamentos, festas e eventos corporativos com acabamento sofisticado e atendimento personalizado.</p>
+            <div class='hero-actions'>
+                <a class='button' href='/pedido'>Começar meu pedido →</a>
+                <a class='button secondary' href='/catalogo'>Ver catálogo</a>
             </div>
-            <div class='hero-quick-links' aria-hidden='false'>
+            <div class='hero-quick-links' aria-label='Categorias mais buscadas'>
                 <a class='quick-link' href='/catalogo?categoria=Casamento'>Casamentos</a>
                 <a class='quick-link' href='/catalogo?categoria=Aniversários'>Aniversários</a>
+                <a class='quick-link' href='/catalogo?categoria=Formatura'>Formatura</a>
                 <a class='quick-link' href='/catalogo?categoria=Corporativo'>Corporativo</a>
             </div>
+        </div>
+    </section>
+
+    <section class='event-gallery-strip' aria-label='Galeria de eventos realizados'>
+        <div class='section-head compact'>
+            <div>
+                <p class='eyebrow'>NOSSOS EVENTOS</p>
+                <h2>Momentos que deixam lembranças.</h2>
+            </div>
+        </div>
+        <div class='event-gallery-grid'>
+            {gallery_items}
+        </div>
+    </section>
+
+    <section class='planner-panel'>
+        <div class='planner-copy'>
+            <p class='eyebrow'>PLANEJAMENTO RÁPIDO</p>
+            <h2>Escolha o tipo do seu evento e veja o que faz sentido para você.</h2>
+            <p>Use as opções ao lado para descobrir rapidamente os materiais mais adequados para cada ocasião e ir direto ao catálogo.</p>
+        </div>
+        <div class='planner-interactive'>
+            <div class='planner-options' aria-label='Tipos de evento'>
+                <button class='planner-option is-active' type='button' data-category='Casamento' data-title='Casamentos' data-text='Mesa de cerimônia, cadeiras, decoração floral, pranchões e detalhes para recepção.' data-url='/catalogo?categoria=Casamento'>Casamentos</button>
+                <button class='planner-option' type='button' data-category='Aniversários' data-title='Aniversários' data-text='Toalhas, peças decorativas, mesas, iluminação e itens para compor a festa com personalidade.' data-url='/catalogo?categoria=Aniversários'>Aniversários</button>
+                <button class='planner-option' type='button' data-category='Corporativo' data-title='Eventos corporativos' data-text='Estrutura para reuniões, coffee break, mesas e peças para ambientação profissional e elegante.' data-url='/catalogo?categoria=Corporativo'>Corporativo</button>
+            </div>
+            <div class='planner-preview' id='planner-preview'>
+                <span class='planner-preview-tag'>Dica rápida</span>
+                <h3 id='planner-title'>Casamentos</h3>
+                <p id='planner-text'>Mesa de cerimônia, cadeiras, decoração floral, pranchões e detalhes para recepção.</p>
+                <div class='planner-preview-footer'>
+                    <strong id='planner-count'>Materiais essenciais</strong>
+                    <a id='planner-link' href='/catalogo?categoria=Casamento'>Ver catálogo</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class='home-cta-panel'>
+        <div class='home-cta-copy'>
+            <p class='eyebrow'>SOLUÇÃO COMPLETA</p>
+            <h2>Tudo para deixar seu evento mais bonito, organizado e memorável.</h2>
+            <p>Desde a decoração até a estrutura ideal, a Dial Eventos ajuda você a criar experiências elegantes para casamentos, festas e eventos corporativos, com atendimento prático e materiais escolhidos com cuidado.</p>
+            <div class='home-cta-actions'>
+                <a class='button' href='/pedido'>Solicitar orçamento</a>
+                <a class='button secondary' href='/catalogo'>Ver catálogo</a>
+            </div>
+        </div>
+        <div class='home-cta-grid'>
+            <a class='home-cta-card' href='/catalogo?categoria=Casamento'>
+                <span class='home-cta-icon'>💍</span>
+                <strong>Casamentos</strong>
+                <small>Cerimônias e recepções com presença, elegância e clima acolhedor.</small>
+            </a>
+            <a class='home-cta-card' href='/catalogo?categoria=Aniversários'>
+                <span class='home-cta-icon'>🎂</span>
+                <strong>Aniversários</strong>
+                <small>Detalhes que deixam cada celebração mais especial e memorável.</small>
+            </a>
+            <a class='home-cta-card' href='/catalogo?categoria=Corporativo'>
+                <span class='home-cta-icon'>🏢</span>
+                <strong>Corporativo</strong>
+                <small>Estrutura e decoração para eventos com identidade e profissionalismo.</small>
+            </a>
         </div>
     </section>
 
@@ -1027,13 +1104,35 @@ def serve_static(path: str):
     requested_path = Path(path)
     if requested_path.is_absolute() or ".." in requested_path.parts:
         return None
-    file_path = STATIC_DIR / requested_path
-    if not file_path.is_file() or STATIC_DIR not in file_path.resolve().parents:
+
+    candidates = [STATIC_DIR / requested_path]
+    if requested_path.parts and requested_path.parts[0] == "images":
+        candidates.append(STATIC_DIR / "static" / requested_path)
+    elif requested_path.parts and requested_path.parts[0] == "static":
+        candidates.append(STATIC_DIR / requested_path.relative_to("static"))
+    else:
+        candidates.append(STATIC_DIR / "static" / requested_path)
+
+    file_path = None
+    for candidate in candidates:
+        try:
+            resolved = candidate.resolve()
+            is_safe = candidate.is_file() and (STATIC_DIR in resolved.parents or resolved == STATIC_DIR)
+        except Exception:
+            is_safe = False
+        if is_safe:
+            file_path = candidate
+            break
+
+    if file_path is None:
         return None
+
     if file_path.suffix == ".css":
         content_type = "text/css; charset=utf-8"
     elif file_path.suffix == ".js":
         content_type = "application/javascript; charset=utf-8"
+    elif file_path.suffix == ".svg":
+        content_type = "image/svg+xml"
     elif file_path.suffix == ".png":
         content_type = "image/png"
     elif file_path.suffix in {".jpg", ".jpeg"}:

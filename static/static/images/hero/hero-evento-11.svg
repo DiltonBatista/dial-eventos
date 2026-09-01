@@ -1,0 +1,21 @@
+<svg width="1200" height="760" viewBox="0 0 1200 760" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg11" x1="0" y1="0" x2="1200" y2="760" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FCE3CB"/>
+      <stop offset="1" stop-color="#F7C6B0"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="760" fill="url(#bg11)"/>
+  <rect x="50" y="130" width="1100" height="520" rx="28" fill="#FFFDFB" fill-opacity="0.53"/>
+  <circle cx="394" cy="270" r="170" fill="#F8DFB5" fill-opacity="0.88"/>
+  <circle cx="394" cy="270" r="118" fill="#F4B882"/>
+  <circle cx="820" cy="292" r="145" fill="#F9EDE4" fill-opacity="0.9"/>
+  <circle cx="820" cy="292" r="98" fill="#E8A997"/>
+  <rect x="270" y="448" width="660" height="110" rx="18" fill="#F2E5D6" fill-opacity="0.9"/>
+  <rect x="296" y="472" width="236" height="18" rx="9" fill="#F3B58F"/>
+  <rect x="296" y="504" width="186" height="18" rx="9" fill="#F7D7B8"/>
+  <rect x="770" y="472" width="122" height="18" rx="9" fill="#E7B7A9"/>
+  <rect x="770" y="504" width="108" height="18" rx="9" fill="#F1DCCB"/>
+  <path d="M0 615C130 560 222 560 390 595C547 628 700 632 865 598C991 573 1098 567 1200 590V760H0V615Z" fill="#F5DDD0"/>
+  <text x="100" y="690" fill="#5B3E34" font-family="Arial, sans-serif" font-size="44" font-weight="700">Aniversário</text>
+</svg>
